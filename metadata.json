@@ -1,0 +1,13 @@
+{
+  "name": "Hospital Pediátrico do Lubango - Gestão de Urgência",
+  "description": "Sistema avançado de recolha de dados, triagem e análise estratégica (BI) para o Hospital Pediátrico do Lubango 'Pioneiro Zeca'. Inclui dashboards analíticos, mapas de risco e gestão de fluxo de pacientes.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "Firebase Firestore",
+    "Real-time Dashboards",
+    "Predictive Analytics",
+    "Excel Export/Import"
+  ]
+}

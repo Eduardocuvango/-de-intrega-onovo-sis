@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "Patient": {
+      "title": "Paciente",
+      "description": "Registro de paciente no banco de urgência",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "genero": { "type": "string" },
+        "dataNascimento": { "type": "string" },
+        "idade": { "type": "number" },
+        "faixaEtaria": { "type": "string" },
+        "dataOcorrencia": { "type": "string" },
+        "horaEntrada": { "type": "string" },
+        "horaSaida": { "type": "string" },
+        "tempoAtendimento": { "type": "number" },
+        "status": { "type": "string", "enum": ["Atendido", "Em Espera"] },
+        "peso": { "type": "number" },
+        "temperatura": { "type": "number" },
+        "pressaoArterial": { "type": "string" },
+        "provincia": { "type": "string" },
+        "cidade": { "type": "string" },
+        "bairro": { "type": "string" },
+        "ocorrencia": { "type": "string" },
+        "sinaisSintomas": { "type": "string" },
+        "diagnosticos": { "type": "string" },
+        "prioridade": { "type": "string", "enum": ["Emergência", "Muito Urgente", "Urgente", "Pouco Urgente", "Não Urgente"] },
+        "estado": { "type": "string", "enum": ["Internado", "Atendido", "Transferido", "Alta", "Óbito"] },
+        "idMedico": { "type": "string" },
+        "assinaturaMedico": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nome", "genero", "dataNascimento", "horaEntrada", "status", "idMedico"]
+    },
+    "User": {
+      "title": "Usuário",
+      "description": "Médicos e Administradores do sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "senha": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "medic"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nome", "senha", "role"]
+    },
+    "Config": {
+      "title": "Configurações",
+      "description": "Configurações globais do sistema",
+      "type": "object",
+      "properties": {
+        "emailAlerts": { "type": "boolean" },
+        "targetEmail": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "patients": {
+      "schema": "Patient",
+      "description": "Coleção de pacientes atendidos"
+    },
+    "users": {
+      "schema": "User",
+      "description": "Coleção de usuários (Médicos e Admins)"
+    },
+    "settings": {
+      "schema": "Config",
+      "description": "Configurações do sistema"
+    }
+  }
+}

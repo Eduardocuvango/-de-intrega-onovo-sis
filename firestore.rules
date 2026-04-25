@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'admin';
+    }
+
+    function isMedic() {
+      return isSignedIn() && (getUserData().role == 'medic' || getUserData().role == 'admin');
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Patient Validation
+    function isValidPatient(data) {
+      return data.nome is string && data.nome.size() > 0 && data.nome.size() <= 200
+        && data.genero in ['Masculino', 'Feminino', 'Outro']
+        && data.status in ['Atendido', 'Em Espera']
+        && data.idade >= 0 && data.idade <= 21;
+    }
+
+    match /users/{userId} {
+      // Admins can manage users. Users can read their own profile.
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update, delete: if isAdmin();
+    }
+
+    match /patients/{patientId} {
+      allow read: if isMedic();
+      allow create: if isMedic() && isValidPatient(request.resource.data);
+      allow update: if isMedic() && isValidPatient(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
