@@ -16,7 +16,8 @@ import {
   Clock,
   UserCheck,
   Stethoscope,
-  Printer
+  Printer,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -116,7 +117,7 @@ export const Dashboard: React.FC = () => {
 
   // Efficiency/Performance by Doctor
   const docStats = filteredByTime.length > 0 ? filteredByTime.reduce((acc: any, p) => {
-    if (!p.assinaturaMedico) return acc;
+    if (!p.assinaturaMedico || p.assinaturaMedico.toLowerCase().includes('admin')) return acc;
     if (!acc[p.assinaturaMedico]) {
       acc[p.assinaturaMedico] = { name: p.assinaturaMedico, count: 0 };
     }
@@ -145,7 +146,87 @@ export const Dashboard: React.FC = () => {
     .sort((a, b) => a.fullDate.localeCompare(b.fullDate))
     .slice(-10); // Last 10 points
 
-  // Clinical Trends
+  // Clinical Trends - Specific to Pediatric Outbreaks in Angola
+  const epidemicStats = filteredByTime.reduce((acc: any, p) => {
+    const occ = (p.ocorrencia || '').toLowerCase();
+    if (occ.includes('malária') || occ.includes('paludismo')) acc.malaria++;
+    if (occ.includes('respiratória') || occ.includes('ira')) acc.ira++;
+    if (occ.includes('diarreia') || occ.includes('dda')) acc.dda++;
+    if (occ.includes('malnutrição') || occ.includes('anemia')) acc.nutri++;
+    if (occ.includes('sarampo')) acc.sarampo++;
+    if (occ.includes('meningite')) acc.meningite++;
+    return acc;
+  }, { malaria: 0, ira: 0, dda: 0, nutri: 0, sarampo: 0, meningite: 0 });
+
+  // Map Data Simulation based on patient provinces/cities/neighborhoods
+  const geoStats = filteredByTime.reduce((acc: any, p) => {
+    const city = (p.cidade || 'Lubango').trim().toLowerCase();
+    const bairro = (p.bairro || '').trim().toLowerCase();
+    
+    // Group by city for coordinates, but track counts
+    if (!acc[city]) acc[city] = { count: 0, bairros: {} };
+    acc[city].count++;
+    
+    if (bairro) {
+      acc[city].bairros[bairro] = (acc[city].bairros[bairro] || 0) + 1;
+    }
+    return acc;
+  }, {} as any);
+
+  // Helper to get coordinates for known neighborhoods in Lubango
+  const getBairroCoords = (bairro: string): [number, number] | null => {
+    const b = bairro.toLowerCase();
+    if (b.includes('mitcha')) return [-14.92, 13.51];
+    if (b.includes('antónio')) return [-14.93, 13.48];
+    if (b.includes('lucrécia')) return [-14.90, 13.50];
+    if (b.includes('lage')) return [-14.95, 13.47];
+    if (b.includes('almeida')) return [-14.94, 13.52];
+    if (b.includes('nambambe')) return [-14.91, 13.46];
+    if (b.includes('chioco')) return [-14.89, 13.53];
+    return null;
+  };
+
+  const mapPoints: any[] = [];
+
+  // Add City points
+  const cities = [
+    { name: 'Lubango', coords: [-14.9175, 13.4925] },
+    { name: 'Humpata', coords: [-15.0117, 13.3658] },
+    { name: 'Chibia', coords: [-15.1906, 13.6333] },
+    { name: 'Cacula', coords: [-14.5000, 13.8833] },
+    { name: 'Quilengues', coords: [-14.07, 14.07] },
+    { name: 'Matala', coords: [-14.73, 15.03] },
+    { name: 'Cuvango', coords: [-14.47, 16.27] },
+    { name: 'Jamba', coords: [-14.69, 16.06] },
+  ];
+
+  cities.forEach(city => {
+    const stats = geoStats[city.name.toLowerCase()];
+    if (stats || city.name === 'Lubango') {
+      mapPoints.push({
+        type: 'city',
+        name: city.name,
+        coords: city.coords,
+        stats: stats || { count: 0, bairros: {} }
+      });
+
+      // If it's Lubango, try to add specific neighborhood points
+      if (city.name === 'Lubango' && stats) {
+        Object.entries(stats.bairros).forEach(([bairro, count]: any) => {
+          const coords = getBairroCoords(bairro);
+          if (coords) {
+            mapPoints.push({
+              type: 'bairro',
+              name: bairro,
+              coords: coords,
+              stats: { count, bairros: {} }
+            });
+          }
+        });
+      }
+    }
+  });
+
   const topDiagnosticos = filteredByTime.length > 0 ? filteredByTime.reduce((acc: any, p) => {
     if (!p.ocorrencia) return acc;
     acc[p.ocorrencia] = (acc[p.ocorrencia] || 0) + 1;
@@ -264,9 +345,9 @@ export const Dashboard: React.FC = () => {
 
           <div className="mt-8 pt-8 border-t border-slate-50 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Ranking de Atividade Portuária (Médicos)</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Produtividade Clínica (Atendimentos/Médico)</h3>
                 <div className="space-y-3">
-                    {docRanking.map((doc: any, i) => (
+                    {docRanking.length > 0 ? docRanking.map((doc: any, i) => (
                         <div key={i} className="flex items-center justify-between">
                             <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{doc.name}</span>
                             <div className="flex items-center gap-2">
@@ -276,7 +357,9 @@ export const Dashboard: React.FC = () => {
                                 <span className="text-[10px] font-black text-blue-600">{doc.count}</span>
                             </div>
                         </div>
-                    ))}
+                    )) : (
+                        <p className="text-[10px] text-slate-400 italic">Sem registros no período...</p>
+                    )}
                 </div>
             </div>
             <div className="bg-slate-50 p-4 rounded-2xl flex flex-col justify-center">
@@ -289,43 +372,84 @@ export const Dashboard: React.FC = () => {
           </div>
         </section>
 
-        {/* ESTADO DOS PACIENTES/OCORRÊNCIAS */}
         <section className="lg:col-span-4 bg-white rounded-3xl p-8 shadow-sm border border-slate-200">
           <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-8">
-            <Stethoscope className="text-indigo-600" /> Perfil & Diagnósticos
+            <TrendingUp className="text-red-500" /> Alerta de Surtos (Huíla)
           </h2>
-          
           <div className="space-y-6">
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Top Motivos de Urgência</p>
-              <div className="space-y-4">
+             <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10px] font-black text-red-600 uppercase">Malária / Paludismo</span>
+                  <span className="text-xs font-black text-red-700">{epidemicStats.malaria}</span>
+                </div>
+                <div className="w-full bg-red-200/50 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-red-500 h-full" style={{width: `${total > 0 ? (epidemicStats.malaria/total)*100 : 0}%`}}></div>
+                </div>
+             </div>
+             <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10px] font-black text-blue-600 uppercase">Doenças Respiratórias (IRA)</span>
+                  <span className="text-xs font-black text-blue-700">{epidemicStats.ira}</span>
+                </div>
+                <div className="w-full bg-blue-200/50 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-blue-500 h-full" style={{width: `${total > 0 ? (epidemicStats.ira/total)*100 : 0}%`}}></div>
+                </div>
+             </div>
+             <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10px] font-black text-amber-600 uppercase">Doenças Diarreicas (DDA)</span>
+                  <span className="text-xs font-black text-amber-700">{epidemicStats.dda}</span>
+                </div>
+                <div className="w-full bg-amber-200/50 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-amber-500 h-full" style={{width: `${total > 0 ? (epidemicStats.dda/total)*100 : 0}%`}}></div>
+                </div>
+             </div>
+             {epidemicStats.sarampo > 0 && (
+               <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 animate-pulse">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-black text-orange-600 uppercase flex items-center gap-1"><AlertTriangle size={10} /> Alerta: Sarampo</span>
+                    <span className="text-xs font-black text-orange-700">{epidemicStats.sarampo}</span>
+                  </div>
+                  <div className="w-full bg-orange-200/50 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-orange-500 h-full" style={{width: `${total > 0 ? (epidemicStats.sarampo/total)*100 : 0}%`}}></div>
+                  </div>
+               </div>
+             )}
+              {epidemicStats.meningite > 0 && (
+               <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-black text-purple-600 uppercase">Meningite</span>
+                    <span className="text-xs font-black text-purple-700">{epidemicStats.meningite}</span>
+                  </div>
+                  <div className="w-full bg-purple-200/50 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-purple-500 h-full" style={{width: `${total > 0 ? (epidemicStats.meningite/total)*100 : 0}%`}}></div>
+                  </div>
+               </div>
+             )}
+          </div>
+
+          <div className="mt-8 pt-8 border-t border-slate-50">
+             <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zona com Mais Casos</p>
+                {Object.keys(geoStats).length > 0 && (
+                  <span className="bg-red-100 text-red-600 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                    {Object.entries(geoStats).sort((a: any, b: any) => (b[1] as any).count - (a[1] as any).count)[0][0]} Crítico
+                  </span>
+                )}
+             </div>
+             <div className="space-y-4">
                 {diagnosticData.map((item, i) => (
                   <div key={i}>
-                    <div className="flex justify-between text-xs font-bold mb-1">
+                    <div className="flex justify-between text-[10px] font-bold mb-1">
                       <span className="text-slate-700 uppercase">{item.name}</span>
                       <span className="text-slate-500">{item.value}</span>
                     </div>
-                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-indigo-500 h-full rounded-full" style={{width: `${(item.value/total)*100}%`}}></div>
+                    <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+                      <div className="bg-indigo-500 h-full rounded-full" style={{width: `${total > 0 ? (item.value/total)*100 : 0}%`}}></div>
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            <div className="pt-6 border-t border-slate-50">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Faixa Etária Predominante</p>
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={ageData.filter(a => a.value > 0)} innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
-                      {ageData.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+             </div>
           </div>
         </section>
       </div>
@@ -386,11 +510,54 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="h-96 rounded-2xl overflow-hidden border border-slate-700">
-            <MapContainer center={[-14.9175, 13.4925]} zoom={12} style={{height: '100%', width: '100%', filter: 'grayscale(0.8) invert(0.9)'}}>
+            <MapContainer center={[-14.9175, 13.4925]} zoom={11} style={{height: '100%', width: '100%', filter: 'grayscale(0.8) invert(0.9)'}}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <CircleMarker center={[-14.9175, 13.4925]} radius={total > 0 ? 15 : 5} fillColor="#ef4444" color="#b91c1c" fillOpacity={0.6}>
-                <Popup><span className="font-bold">LUBANGO CENTRO</span><br/>Surtos ativos detectados.</Popup>
-              </CircleMarker>
+              {mapPoints.map((pt, i) => (
+                <CircleMarker 
+                  key={i}
+                  center={pt.coords as [number, number]} 
+                  radius={pt.type === 'city' ? Math.max(8, Math.min(25, pt.stats.count * 1.5)) : 5} 
+                  fillColor={pt.stats.count > 10 ? "#ef4444" : (pt.type === 'city' ? "#3b82f6" : "#10b981")} 
+                  color="white"
+                  weight={pt.type === 'city' ? 2 : 1}
+                  fillOpacity={pt.type === 'city' ? 0.6 : 0.8}
+                  className={pt.stats.count > 15 ? "animate-pulse" : ""}
+                >
+                  <Popup>
+                    <div className="p-3 min-w-[160px] font-sans">
+                       <div className="flex items-center gap-1.5 mb-2 border-b border-slate-100 pb-2">
+                          <span className={`w-2 h-2 rounded-full ${pt.type === 'city' ? 'bg-blue-500' : 'bg-emerald-500'}`}></span>
+                          <p className="font-black text-slate-900 text-xs uppercase tracking-tight">{pt.name}</p>
+                       </div>
+                       <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                             <span className="text-[10px] font-bold text-slate-500 uppercase">Total Casos</span>
+                             <span className="text-xs font-black text-slate-900">{pt.stats.count}</span>
+                          </div>
+                          
+                          {pt.type === 'city' && Object.keys(pt.stats.bairros).length > 0 && (
+                            <div className="pt-2 border-t border-slate-50">
+                               <p className="text-[9px] font-black text-blue-600 uppercase mb-1">Principais Bairros:</p>
+                               {Object.entries(pt.stats.bairros).sort((a: any, b: any) => b[1] - a[1]).slice(0, 3).map(([bairro, count]: any) => (
+                                 <div key={bairro} className="flex justify-between text-[9px] text-slate-600">
+                                    <span className="capitalize">{bairro}</span>
+                                    <span className="font-bold">{count}</span>
+                                 </div>
+                               ))}
+                            </div>
+                          )}
+
+                          {pt.stats.count > 10 && (
+                            <div className="mt-2 py-1.5 px-2 bg-red-50 text-red-600 rounded-lg flex items-center gap-1.5 border border-red-100">
+                               <AlertTriangle size={10} className="shrink-0" />
+                               <span className="text-[9px] font-black uppercase">ALERTA DE SURTO</span>
+                            </div>
+                          )}
+                       </div>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              ))}
             </MapContainer>
           </div>
         </section>

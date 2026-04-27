@@ -245,7 +245,25 @@ export const RegisterPatient: React.FC<PatientFormProps> = ({ initialData, isEdi
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Bairro / Zona</label>
-              <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none text-xs font-black text-slate-800 uppercase" value={formData.bairro} onChange={e => setFormData(prev => ({...prev, bairro: e.target.value}))} />
+              <input 
+                type="text" 
+                list="bairros-list"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none text-xs font-black text-slate-800 uppercase" 
+                value={formData.bairro} 
+                onChange={e => setFormData(prev => ({...prev, bairro: e.target.value}))} 
+              />
+              <datalist id="bairros-list">
+                <option value="Mitcha" />
+                <option value="Santo António" />
+                <option value="Lucrécia" />
+                <option value="Lage" />
+                <option value="João de Almeida" />
+                <option value="Nambambe" />
+                <option value="Chioco" />
+                <option value="Comercial" />
+                <option value="Bacalhau" />
+                <option value="Arco-Íris" />
+              </datalist>
             </div>
           </div>
         </section>
@@ -311,10 +329,16 @@ export const RegisterPatient: React.FC<PatientFormProps> = ({ initialData, isEdi
                 <option value="">Selecione...</option>
                 <option value="Malária">Malária (Paludismo)</option>
                 <option value="Infeção Respiratória">IRA (Respiratória)</option>
-                <option value="Diarreia">DDA (Diarreica)</option>
-                <option value="Malnutrição">Malnutrição / Anemia</option>
+                <option value="Diarreia">DDA (Diarreica / Cólera)</option>
+                <option value="Malnutrição">Malnutrição (Kwas/Mara)</option>
+                <option value="Anemia Falciforme">Anemia Falciforme (SS)</option>
+                <option value="Sarampo">Sarampo / Exantemática</option>
+                <option value="Meningite">Meningite Bacteriana</option>
+                <option value="Febre Tifóide">Febre Tifóide</option>
                 <option value="Traumatismo">Traumatismo / Acidente</option>
                 <option value="Febre a Esclarecer">Febre a Esclarecer</option>
+                <option value="Tuberculose">Tuberculose Pediátrica</option>
+                <option value="Sepsis">Sepsis Neonatal</option>
                 <option value="Outro">Outro Motivo</option>
               </select>
             </div>
