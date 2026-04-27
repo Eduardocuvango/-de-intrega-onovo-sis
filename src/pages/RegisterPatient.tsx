@@ -29,7 +29,6 @@ export const RegisterPatient: React.FC<PatientFormProps> = ({ initialData, isEdi
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [ageWarning, setAgeWarning] = useState(false);
 
   const [formData, setFormData] = useState<Partial<Patient>>(initialData || {
     nome: '',
@@ -51,28 +50,26 @@ export const RegisterPatient: React.FC<PatientFormProps> = ({ initialData, isEdi
     diagnosticos: '',
   });
 
-  // Derived fields
-  useEffect(() => {
-    if (formData.dataNascimento) {
+  // Calculate derived fields on the fly to avoid extra state updates
+  const calculatedAge = React.useMemo(() => {
+    if (!formData.dataNascimento) return null;
+    try {
       const age = differenceInYears(new Date(), parseISO(formData.dataNascimento));
-      setAgeWarning(age > 21);
-      
-      let faixa = 'Infantil';
-      if (age < 1) faixa = 'Recém-nascido';
-      else if (age < 12) faixa = 'Criança';
-      else if (age < 18) faixa = 'Adolescente';
-      else faixa = 'Jovem Adulto';
-
-      setFormData(prev => ({ ...prev, idade: age, faixaEtaria: faixa }));
+      return isNaN(age) ? null : age;
+    } catch {
+      return null;
     }
   }, [formData.dataNascimento]);
 
-  // Smart Status Logic
-  useEffect(() => {
-    if (formData.diagnosticos && formData.diagnosticos.trim().length > 5 && formData.status === 'Em Espera') {
-      setFormData(prev => ({ ...prev, status: 'Atendido' }));
-    }
-  }, [formData.diagnosticos]);
+  const calculatedFaixa = React.useMemo(() => {
+    if (calculatedAge === null) return '';
+    if (calculatedAge < 1) return 'Recém-nascido';
+    if (calculatedAge < 12) return 'Criança';
+    if (calculatedAge < 18) return 'Adolescente';
+    return 'Jovem Adulto';
+  }, [calculatedAge]);
+
+  const ageWarning = calculatedAge !== null && calculatedAge > 21;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,13 +91,27 @@ export const RegisterPatient: React.FC<PatientFormProps> = ({ initialData, isEdi
         );
       }
 
+      // Smart status logic during submission if not manually set
+      let finalStatus = formData.status;
+      if (formData.diagnosticos && formData.diagnosticos.trim().length > 5 && finalStatus === 'Em Espera') {
+        finalStatus = 'Atendido';
+      }
+
+      const timestamp = serverTimestamp();
+      const randomId = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      const datePart = format(new Date(), 'yyyyMMdd');
+      const generatedId = `HPZ-${datePart}-${randomId}`;
+
       const data = {
         ...formData,
-        idPaciente: isEditing ? (formData.idPaciente || `HPZ-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`) : `HPZ-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+        status: finalStatus,
+        idade: calculatedAge,
+        faixaEtaria: calculatedFaixa,
+        idPaciente: isEditing ? (formData.idPaciente || generatedId) : generatedId,
         idMedico: user.id || auth.currentUser?.uid,
         assinaturaMedico: user.nome || auth.currentUser?.displayName || "Médico de Plantão",
         tempoAtendimento: serviceTime > 0 ? serviceTime : 0,
-        updatedAt: serverTimestamp(),
+        updatedAt: timestamp,
       };
 
       if (isEditing && initialData) {
@@ -108,7 +119,7 @@ export const RegisterPatient: React.FC<PatientFormProps> = ({ initialData, isEdi
       } else {
         await addDoc(collection(db, 'patients'), {
           ...data,
-          createdAt: serverTimestamp(),
+          createdAt: timestamp,
         });
       }
       navigate('/list');
@@ -178,11 +189,11 @@ export const RegisterPatient: React.FC<PatientFormProps> = ({ initialData, isEdi
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Idade (Cálculo)</label>
-              <input type="text" disabled className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-xs font-black text-slate-500" value={formData.idade ?? ''} />
+              <input type="text" disabled className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-xs font-black text-slate-500" value={(calculatedAge !== null && !isNaN(calculatedAge)) ? calculatedAge : ''} />
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Estrato Etário</label>
-              <input type="text" disabled className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-xs font-black text-blue-600 uppercase" value={formData.faixaEtaria ?? ''} />
+              <input type="text" disabled className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-xs font-black text-blue-600 uppercase" value={calculatedFaixa ?? ''} />
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">ID do Médico (Auto)</label>
@@ -250,14 +261,30 @@ export const RegisterPatient: React.FC<PatientFormProps> = ({ initialData, isEdi
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Peso Corporal (kg)</label>
               <div className="relative">
                 <Weight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input type="number" step="0.1" className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none text-xs font-black text-slate-800" value={formData.peso} onChange={e => setFormData(prev => ({...prev, peso: parseFloat(e.target.value)}))} />
+                <input 
+                  type="number" step="0.1" 
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none text-xs font-black text-slate-800" 
+                  value={formData.peso !== undefined && !isNaN(formData.peso) ? formData.peso : ''} 
+                  onChange={e => {
+                    const val = parseFloat(e.target.value);
+                    setFormData(prev => ({...prev, peso: isNaN(val) ? 0 : val}));
+                  }} 
+                />
               </div>
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Temperatura (°C)</label>
               <div className="relative">
                 <Thermometer className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input type="number" step="0.1" className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none text-xs font-black text-slate-800" value={formData.temperatura} onChange={e => setFormData(prev => ({...prev, temperatura: parseFloat(e.target.value)}))} />
+                <input 
+                  type="number" step="0.1" 
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none text-xs font-black text-slate-800" 
+                  value={formData.temperatura !== undefined && !isNaN(formData.temperatura) ? formData.temperatura : ''} 
+                  onChange={e => {
+                    const val = parseFloat(e.target.value);
+                    setFormData(prev => ({...prev, temperatura: isNaN(val) ? 0 : val}));
+                  }} 
+                />
               </div>
             </div>
             <div>
@@ -275,8 +302,21 @@ export const RegisterPatient: React.FC<PatientFormProps> = ({ initialData, isEdi
           </div>
           <div className="grid grid-cols-1 gap-6">
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Ocorrência Principais (Motivo)</label>
-              <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none text-xs font-black text-slate-800 uppercase" placeholder="Febre, vômito, queda..." value={formData.ocorrencia} onChange={e => setFormData(prev => ({...prev, ocorrencia: e.target.value}))} />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Motivo / Patologia Principal</label>
+              <select 
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none text-xs font-black text-slate-800 uppercase appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSIjOTQ5N2FjIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik02IDlsNiA2IDYtNiIvPjwvc3ZnPg==')] bg-[length:20px] bg-[right_16px_center] bg-no-repeat" 
+                value={formData.ocorrencia || ''} 
+                onChange={e => setFormData(prev => ({...prev, ocorrencia: e.target.value}))}
+              >
+                <option value="">Selecione...</option>
+                <option value="Malária">Malária (Paludismo)</option>
+                <option value="Infeção Respiratória">IRA (Respiratória)</option>
+                <option value="Diarreia">DDA (Diarreica)</option>
+                <option value="Malnutrição">Malnutrição / Anemia</option>
+                <option value="Traumatismo">Traumatismo / Acidente</option>
+                <option value="Febre a Esclarecer">Febre a Esclarecer</option>
+                <option value="Outro">Outro Motivo</option>
+              </select>
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Sinais / Sintomas Observados</label>

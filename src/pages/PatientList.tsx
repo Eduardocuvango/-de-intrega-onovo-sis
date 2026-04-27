@@ -12,17 +12,21 @@ import {
   History,
   Database,
   Printer,
-  Download,
-  FileSpreadsheet
+  FileText,
+  Thermometer,
+  Weight,
+  Heart
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useAuth } from '../lib/AuthContext';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const PatientList: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [hoveredPatient, setHoveredPatient] = useState<string | null>(null);
   
   // Filters
   const [filterPriority, setFilterPriority] = useState('Todas');
@@ -202,14 +206,89 @@ export const PatientList: React.FC = () => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filteredPatients.map((p) => (
-              <tr key={p.id} className="hover:bg-slate-50 transition-colors group">
+              <tr 
+                key={p.id} 
+                className="hover:bg-slate-50 transition-colors group relative"
+                onMouseEnter={() => setHoveredPatient(p.id)}
+                onMouseLeave={() => setHoveredPatient(null)}
+              >
                 <td className="px-6 py-4">
-                  <div className="flex flex-col">
+                  <div className="flex flex-col relative">
                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-tight mb-1">{p.idPaciente || "S/ID"}</span>
                     <span className="font-black text-slate-800 text-xs uppercase tracking-tight">{p.nome}</span>
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
                       {p.genero[0]} • {p.idade} ANOS {p.idade > 21 && '⚠️'}
                     </span>
+                    
+                    {/* Tooltip Detalhado */}
+                    <AnimatePresence>
+                      {hoveredPatient === p.id && (
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.95, x: 20 }}
+                          animate={{ opacity: 1, scale: 1, x: 30 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="absolute left-full top-0 z-[100] w-[320px] bg-white border border-slate-200 shadow-2xl rounded-2xl p-6 no-print pointer-events-none"
+                        >
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-600">Ficha Rápida</h4>
+                              <span className="text-[9px] font-bold text-slate-400">{p.dataOcorrencia}</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Nascimento</span>
+                                <span className="text-[10px] font-black text-slate-700">{p.dataNascimento || "N/A"}</span>
+                              </div>
+                              <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                <span className="text-[8px] font-black text-slate-400 uppercase block mb-1">Género</span>
+                                <span className="text-[10px] font-black text-slate-700 uppercase">{p.genero}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                              <div className="flex-1 flex items-center gap-2 bg-rose-50 text-rose-600 p-2 rounded-lg border border-rose-100">
+                                <Thermometer size={12} className="shrink-0" />
+                                <span className="text-[10px] font-black">{p.temperatura || "0"}°C</span>
+                              </div>
+                              <div className="flex-1 flex items-center gap-2 bg-blue-50 text-blue-600 p-2 rounded-lg border border-blue-100">
+                                <Heart size={12} className="shrink-0" />
+                                <span className="text-[10px] font-black">{p.pressaoArterial || "0/0"}</span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <span className="text-[8px] font-black text-slate-400 uppercase block mb-1 flex items-center gap-1">
+                                <FileText size={10} /> Queixa Principal
+                              </span>
+                              <p className="text-[10px] font-medium text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 italic">
+                                "{p.sinaisSintomas || "Nenhuma queixa registada."}"
+                              </p>
+                            </div>
+
+                            {p.diagnosticos && (
+                              <div>
+                                <span className="text-[8px] font-black text-blue-600 uppercase block mb-1">Diagnóstico Provável</span>
+                                <p className="text-[10px] font-black text-slate-800 leading-relaxed">
+                                  {p.diagnosticos}
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                              <div className="flex flex-col">
+                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest">Assinado por</span>
+                                <span className="text-[9px] font-black text-slate-800 uppercase">{p.assinaturaMedico}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-slate-400">
+                                <Clock size={10} />
+                                <span className="text-[9px] font-black">{p.tempoAtendimento || 0}m</span>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </td>
                 <td className="px-6 py-4">

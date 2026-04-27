@@ -97,12 +97,16 @@ export const Dashboard: React.FC = () => {
   const emEspera = filteredByTime.filter(p => p.status === 'Em Espera').length;
 
   // Efficiency metrics
-  const avgWaitTime = filteredByTime.length > 0 
-    ? Math.round(filteredByTime.reduce((acc, p) => acc + (p.tempoAtendimento || 0), 0) / filteredByTime.length) 
-    : 0;
+  const totalWaitTime = filteredByTime.reduce((acc, p) => {
+    const time = Number(p.tempoAtendimento);
+    return acc + (isNaN(time) ? 0 : time);
+  }, 0);
+  const avgWaitTimeRaw = filteredByTime.length > 0 ? totalWaitTime / filteredByTime.length : 0;
+  const avgWaitTime = isNaN(avgWaitTimeRaw) ? 0 : Math.round(avgWaitTimeRaw);
 
   // New Feature Idea: Real-time unit pressure
-  const pressureLevel = total > 0 ? (emEspera / total) * 100 : 0;
+  const pressureLevelRaw = total > 0 ? (emEspera / total) * 100 : 0;
+  const pressureLevel = isNaN(pressureLevelRaw) ? 0 : pressureLevelRaw;
   const getPressureInfo = () => {
     if (pressureLevel > 70) return { label: 'CRÍTICO', color: 'text-red-500', bg: 'bg-red-50' };
     if (pressureLevel > 40) return { label: 'ALTO', color: 'text-orange-500', bg: 'bg-orange-50' };
@@ -267,7 +271,7 @@ export const Dashboard: React.FC = () => {
                             <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{doc.name}</span>
                             <div className="flex items-center gap-2">
                                 <div className="w-24 bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                    <div className="bg-blue-600 h-full" style={{width: `${(doc.count/total)*100}%`}}></div>
+                                    <div className="bg-blue-600 h-full" style={{width: `${total > 0 ? (doc.count/total)*100 : 0}%`}}></div>
                                 </div>
                                 <span className="text-[10px] font-black text-blue-600">{doc.count}</span>
                             </div>
