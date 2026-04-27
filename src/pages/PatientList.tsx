@@ -120,8 +120,20 @@ export const PatientList: React.FC = () => {
     <div className="space-y-6 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Fluxo de Urgência</h1>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Monitorização de Atendimento em Tempo Real</p>
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Fluxo de Urgência</h1>
+            <div className="flex items-center gap-2">
+              <span className="bg-blue-600 text-white px-3 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100">
+                {patients.length} Total
+              </span>
+              {filteredPatients.length !== patients.length && (
+                <span className="bg-slate-100 text-slate-500 px-3 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-200">
+                  {filteredPatients.length} Encontrados
+                </span>
+              )}
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Monitorização de Atendimento em Tempo Real</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleSeedDemoData} className="flex items-center gap-2 bg-amber-500 text-white px-3 py-2 rounded-xl hover:bg-amber-600 transition font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-100">
