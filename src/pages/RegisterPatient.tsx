@@ -96,6 +96,7 @@ export const RegisterPatient: React.FC<PatientFormProps> = ({ initialData, isEdi
 
       const data = {
         ...formData,
+        idPaciente: isEditing ? (formData.idPaciente || `HPZ-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`) : `HPZ-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
         idMedico: user.id || auth.currentUser?.uid,
         assinaturaMedico: user.nome || auth.currentUser?.displayName || "Médico de Plantão",
         tempoAtendimento: serviceTime > 0 ? serviceTime : 0,
@@ -182,6 +183,10 @@ export const RegisterPatient: React.FC<PatientFormProps> = ({ initialData, isEdi
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Estrato Etário</label>
               <input type="text" disabled className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-xs font-black text-blue-600 uppercase" value={formData.faixaEtaria ?? ''} />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">ID do Médico (Auto)</label>
+              <input type="text" disabled className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-xs font-black text-slate-500" value={user?.id?.slice(-8).toUpperCase() || 'S/ID'} />
             </div>
           </div>
         </section>

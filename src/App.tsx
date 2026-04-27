@@ -22,7 +22,11 @@ const ProtectedRoute = ({ children, adminOnly = false }: { children: React.React
   );
   
   if (!user) return <Navigate to="/login" />;
-  if (adminOnly && !isAdmin) return <Navigate to="/" />;
+  
+  if (adminOnly && !isAdmin) {
+    // If user is not admin but tries to access admin page, send to patient list
+    return <Navigate to="/list" />;
+  }
 
   return <AppLayout>{children}</AppLayout>;
 };

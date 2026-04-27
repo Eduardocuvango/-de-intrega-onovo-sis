@@ -10,7 +10,10 @@ import {
   Clock,
   CheckCircle2,
   History,
-  Database
+  Database,
+  Printer,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -36,12 +39,22 @@ export const PatientList: React.FC = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setPatients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient)));
       setLoading(false);
+    }, (error) => {
+      console.error("PatientList Snapshot Error:", error);
+      setLoading(false);
     });
     return unsubscribe;
   }, []);
 
+  const handlePrint = () => {
+    window.focus();
+    window.print();
+  };
+
   const filteredPatients = patients.filter(p => {
-    const matchSearch = p.nome.toLowerCase().includes(searchTerm.toLowerCase()) || p.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch = p.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      (p.idPaciente || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      p.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchPriority = filterPriority === 'Todas' || p.prioridade === filterPriority;
     const matchStatus = filterStatus === 'Todos' || p.status === filterStatus;
     const matchState = filterState === 'Todos' || p.estado === filterState;
@@ -53,8 +66,18 @@ export const PatientList: React.FC = () => {
   const uniqueProvinces = Array.from(new Set(patients.map(p => p.provincia))).filter(Boolean);
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Tem certeza que deseja excluir este registro?")) {
-      await deleteDoc(doc(db, 'patients', id));
+    if (!isAdmin) {
+      alert("Apenas administradores podem apagar registros.");
+      return;
+    }
+    if (window.confirm("Tem certeza que deseja excluir este registro permanentemente?")) {
+      try {
+        await deleteDoc(doc(db, 'patients', id));
+        alert("Paciente removido com sucesso.");
+      } catch (err) {
+        console.error("Erro ao apagar:", err);
+        alert("Erro ao apagar: Verifique suas permissões.");
+      }
     }
   };
 
@@ -101,8 +124,14 @@ export const PatientList: React.FC = () => {
             <Database size={14} /> Dados Demo
           </button>
           <button 
+            onClick={handlePrint}
+            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl hover:bg-slate-50 transition font-black text-[10px] uppercase tracking-widest no-print"
+          >
+            <Printer className="w-4 h-4" /> Imprimir
+          </button>
+          <button 
             onClick={() => navigate('/register')}
-            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-100"
+            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-100 no-print"
           >
             <Plus className="w-4 h-4" /> Novo Paciente
           </button>
@@ -110,7 +139,7 @@ export const PatientList: React.FC = () => {
       </div>
 
       {/* Filter Matrix */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4 no-print">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input 
@@ -164,11 +193,11 @@ export const PatientList: React.FC = () => {
         <table className="w-full text-left">
           <thead className="bg-[#0F172A] text-white">
             <tr>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Identificação</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">ID / Paciente</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Prioridade</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Status / Alerta</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Localidade</th>
-              <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Ações</th>
+              <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest whitespace-nowrap no-print">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -176,6 +205,7 @@ export const PatientList: React.FC = () => {
               <tr key={p.id} className="hover:bg-slate-50 transition-colors group">
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-tight mb-1">{p.idPaciente || "S/ID"}</span>
                     <span className="font-black text-slate-800 text-xs uppercase tracking-tight">{p.nome}</span>
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
                       {p.genero[0]} • {p.idade} ANOS {p.idade > 21 && '⚠️'}
@@ -204,7 +234,7 @@ export const PatientList: React.FC = () => {
                      <div className="text-slate-400">{p.cidade}</div>
                    </div>
                 </td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-6 py-4 text-right no-print">
                   <div className="flex items-center justify-end gap-2">
                     <button onClick={() => navigate(`/edit/${p.id}`)} className="p-2 text-slate-400 hover:text-blue-600 bg-white border border-slate-100 rounded-xl transition-all shadow-sm">
                       <Edit3 size={14} />

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
+import { useAuth } from '../lib/AuthContext';
 import { collection, query, where, getDocs, setDoc, doc } from 'firebase/firestore';
 import { Activity, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -10,14 +11,21 @@ export const Login: React.FC = () => {
   const [nome, setNome] = useState('');
   const [senha, setSenha] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  React.useEffect(() => {
+    if (!authLoading && user) {
+      navigate(user.role === 'admin' ? '/' : '/list');
+    }
+  }, [user, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome || !senha) return;
 
-    setLoading(true);
+    setIsLoggingIn(true);
     setError('');
 
     try {
@@ -26,45 +34,16 @@ export const Login: React.FC = () => {
       const email = `${cleanName}@hospital.local`;
       
       await signInWithEmailAndPassword(auth, email, senha);
-      navigate('/');
+      // Removed direct navigate, the useEffect will handle it safely
     } catch (err: any) {
       console.error("Login detail:", err.code, err.message);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError('Nome de usuário ou senha incorretos. Use o Setup Inicial se for o primeiro acesso.');
+        setError('Nome de usuário ou senha incorretos.');
       } else {
         setError('Ocorreu um erro ao tentar entrar. Verifique sua conexão.');
       }
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBootstrap = async () => {
-    setLoading(true);
-    try {
-      // Create admin user
-      const email = "administrador@hospital.local";
-      const password = "admin123";
-      
-      try {
-        const res = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(doc(db, 'users', res.user.uid), {
-          nome: "Administrador",
-          role: "admin",
-          createdAt: new Date().toISOString()
-        });
-        alert("SISTEMA CONFIGURADO!\n\nUsuário: Administrador\nSenha: admin123\n\nUse estas credenciais para entrar.");
-      } catch (authErr: any) {
-        if (authErr.code === 'auth/email-already-in-use') {
-          alert("O sistema já foi configurado anteriormente.");
-        } else {
-          throw authErr;
-        }
-      }
-    } catch (err: any) {
-      alert("Erro no setup: " + err.message);
-    } finally {
-      setLoading(false);
+      setIsLoggingIn(false);
     }
   };
 
@@ -72,14 +51,6 @@ export const Login: React.FC = () => {
     <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
       
-      <div className="fixed top-4 right-4 z-50">
-        <button 
-          onClick={handleBootstrap}
-          className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors bg-slate-800/50 px-2 py-1 rounded border border-slate-700"
-        >
-          Setup Inicial
-        </button>
-      </div>
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -142,11 +113,11 @@ export const Login: React.FC = () => {
             )}
 
             <button
-              disabled={loading}
+              disabled={isLoggingIn}
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-all transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar no Sistema'}
+              {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar no Sistema'}
             </button>
           </form>
 
@@ -162,3 +133,5 @@ export const Login: React.FC = () => {
     </div>
   );
 };
+
+export default Login; // Adding default export for cleaner App.tsx usage if needed

@@ -14,6 +14,7 @@ export type PatientState = 'Internado' | 'Atendido' | 'Transferido' | 'Alta' | '
 
 export interface Patient {
   id: string;
+  idPaciente: string;
   nome: string;
   genero: 'Masculino' | 'Feminino' | 'Outro';
   dataNascimento: string;

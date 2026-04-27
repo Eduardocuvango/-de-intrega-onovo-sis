@@ -25,16 +25,33 @@
 
   /* Print Styles */
   @media print {
-    aside, header, button, .no-print {
+    aside, header, nav, button, .no-print {
       display: none !important;
     }
     main {
       padding: 0 !important;
       margin: 0 !important;
+      width: 100% !important;
     }
     .bg-white {
       box-shadow: none !important;
       border: none !important;
+    }
+    table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+    }
+    th, td {
+      border: 1px solid #e2e8f0 !important;
+      padding: 8px !important;
+      color: black !important;
+    }
+    thead {
+      background-color: #f1f5f9 !important;
+      color: black !important;
+    }
+    tr {
+      page-break-inside: avoid;
     }
   }
 }

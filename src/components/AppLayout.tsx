@@ -19,6 +19,18 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -26,7 +38,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard, role: 'any' },
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard, role: 'admin' },
     { name: 'Novo Atendimento', path: '/register', icon: UserPlus, role: 'any' },
     { name: 'Lista de Pacientes', path: '/list', icon: Users, role: 'any' },
     { name: 'Configurações', path: '/settings', icon: Settings, role: 'admin' },
@@ -37,14 +49,17 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans">
       {/* Sidebar for Desktop */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200">
-        <div className="p-6 flex items-center gap-3">
-          <div className="bg-blue-600 p-2 rounded-lg">
-            <Activity className="w-6 h-6 text-white" />
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 no-print">
+        <div className="p-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-600 p-2 rounded-lg">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="font-bold text-slate-800 text-lg leading-tight uppercase tracking-tighter">
+              Pioneiro Zeca
+            </h1>
           </div>
-          <h1 className="font-bold text-slate-800 text-lg leading-tight">
-            Pioneiro Zeca
-          </h1>
+          <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500 animate-pulse'}`} title={isOnline ? 'Sistema Online' : 'Sistema Offline'}></div>
         </div>
 
         <nav className="flex-1 px-4 py-4 space-y-1">
@@ -85,10 +100,11 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
       </aside>
 
       {/* Header for Mobile */}
-      <header className="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-50">
+      <header className="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-50 no-print">
         <div className="flex items-center gap-2">
           <Activity className="w-6 h-6 text-blue-600" />
-          <h1 className="font-bold text-slate-800">Pioneiro Zeca</h1>
+          <h1 className="font-bold text-slate-800 uppercase tracking-tighter">Pioneiro Zeca</h1>
+          <div className={`w-1.5 h-1.5 rounded-full ml-1 ${isOnline ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}></div>
         </div>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? <X /> : <Menu />}

@@ -7,6 +7,9 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 
+// Isolated app for creating new users without signing out the current admin
+export const secondaryApp = initializeApp(firebaseConfig, 'SecondaryRegistration');
+
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
