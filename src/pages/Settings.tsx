@@ -128,6 +128,7 @@ export const SettingsPage: React.FC = () => {
         role: newUserRole,
         idMedico: generatedIdMedico,
         email: email,
+        senha: newUserPass, // Armazenando a senha como solicitado pelo usuário
         createdAt: new Date().toISOString(),
         createdBy: auth.currentUser?.uid || 'system'
       });
@@ -202,6 +203,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
+    console.log("Tentando apagar utilizador:", userId, userName);
     if (!isAdmin) {
       alert("Apenas administradores podem gerir utilizadores.");
       return;
@@ -212,13 +214,18 @@ export const SettingsPage: React.FC = () => {
       return;
     }
 
-    if (confirm(`Tem a certeza que deseja remover o acesso de ${userName}?\nO utilizador deixará de conseguir entrar no sistema.`)) {
+    if (confirm(`TEM A CERTEZA?\n\nRemover o acesso de: ${userName}\n\nEsta ação é irreversível e o médico perderá o acesso imediato ao sistema.\n\nNota: A conta continuará no Firebase Auth, mas sem permissões de acesso aos dados.`)) {
+      setLoading(true);
       try {
-        await deleteDoc(doc(db, 'users', userId));
-        alert("Acesso removido com sucesso.");
-      } catch (err) {
-        console.error("Erro ao remover utilizador:", err);
-        alert("Erro ao remover utilizador. Verifique as suas permissões.");
+        const userRef = doc(db, 'users', userId);
+        await deleteDoc(userRef);
+        console.log("Documento removido do Firestore:", userId);
+        alert("Acesso removido com sucesso do banco de dados.");
+      } catch (err: any) {
+        console.error("Erro CRÍTICO ao remover utilizador:", err);
+        alert(`ERRO: ${err.message}\n\nVerifique se tem conexão à internet e permissões de Administrador.`);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -274,27 +281,55 @@ export const SettingsPage: React.FC = () => {
             </button>
           </form>
 
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 sticky top-0 bg-white py-1">Membros Ativos</div>
-            {users.map(user => (
-              <div key={user.id} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-lg group">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-xs font-bold text-slate-500">
-                    {user.nome[0].toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-slate-800 tracking-tight">{user.nome}</div>
-                    <div className="text-[10px] text-slate-400 uppercase font-black">{user.role}</div>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => handleDeleteUser(user.id, user.nome)}
-                  className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
-                >
-                  <Trash2 size={16} />
-                </button>
+          <div className="space-y-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="flex items-center justify-between sticky top-0 bg-white py-2 transition-all z-10 border-b border-slate-50 mb-2">
+              <div className="text-xs font-black text-slate-400 uppercase tracking-widest">Membros da Equipe ({users.length})</div>
+            </div>
+            {users.length === 0 ? (
+              <div className="text-center py-10 bg-slate-50 rounded-xl border-2 border-dashed border-slate-100">
+                <Users className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+                <p className="text-slate-400 text-[10px] font-black uppercase">Nenhum membro encontrado</p>
               </div>
-            ))}
+            ) : (
+              users.sort((a, b) => b.createdAt?.localeCompare(a.createdAt || '') || 0).map(user => (
+                <div key={user.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl group hover:border-blue-200 hover:shadow-md hover:shadow-blue-50/50 transition-all duration-300">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-slate-50 to-slate-100 rounded-full flex items-center justify-center text-sm font-black text-slate-600 group-hover:from-blue-50 group-hover:to-blue-100 group-hover:text-blue-600 transition-colors border border-slate-200">
+                      {user.nome[0].toUpperCase()}
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="text-sm font-black text-slate-800 tracking-tight leading-none mb-1 group-hover:text-blue-700 transition-colors">{user.nome}</div>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                           <Shield size={10} className={user.role === 'admin' ? 'text-orange-500' : 'text-blue-500'} />
+                           <span className={`text-[9px] font-black uppercase tracking-tighter ${user.role === 'admin' ? 'text-orange-600' : 'text-blue-600'}`}>
+                             {user.role === 'admin' ? 'Administrador' : 'Corpo Médico'}
+                           </span>
+                        </div>
+                        {user.senha && (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 border border-amber-100 rounded-md w-fit">
+                             <span className="text-[8px] font-black text-amber-500 uppercase">Senha de Acesso:</span>
+                             <span className="text-[10px] font-mono font-black text-amber-700 tracking-wider">
+                               {user.senha}
+                             </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {isAdmin && user.id !== auth.currentUser?.uid && (
+                    <button 
+                      onClick={() => handleDeleteUser(user.id, user.nome)}
+                      disabled={loading}
+                      className="text-slate-300 hover:text-red-600 transition-all p-2.5 rounded-xl hover:bg-red-50 flex items-center justify-center border border-transparent hover:border-red-100 shadow-sm hover:shadow-red-100"
+                      title="Excluir conta permanentemente"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </section>
 

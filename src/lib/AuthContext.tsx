@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from './firebase';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { User, UserRole } from '../types';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -23,26 +23,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let unsubscribeDoc: (() => void) | undefined;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        // Listen to user document changes in real-time
+        unsubscribeDoc = onSnapshot(doc(db, 'users', firebaseUser.uid), (userDoc) => {
           if (userDoc.exists()) {
             setUser({ id: firebaseUser.uid, ...userDoc.data() } as User);
           } else {
+            console.log("No user document found for UID:", firebaseUser.uid);
             setUser(null);
           }
-        } catch (error) {
-          console.error("Error fetching user role:", error);
-          setUser(null);
-        }
+          setLoading(false);
+        }, (error) => {
+          console.error("Error listening to user document:", error);
+          setLoading(false);
+        });
       } else {
         setUser(null);
+        if (unsubscribeDoc) unsubscribeDoc();
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeDoc) unsubscribeDoc();
+    };
   }, []);
 
   const value = {
