@@ -214,16 +214,17 @@ export const SettingsPage: React.FC = () => {
       return;
     }
 
-    if (confirm(`TEM A CERTEZA?\n\nRemover o acesso de: ${userName}\n\nEsta ação é irreversível e o médico perderá o acesso imediato ao sistema.\n\nNota: A conta continuará no Firebase Auth, mas sem permissões de acesso aos dados.`)) {
+    if (confirm(`❗ EXCLUSÃO PERMANENTE\n\nTem certeza que deseja remover o acesso de: ${userName}?\n\nO médico perderá o acesso imediato ao sistema.\nA conta no banco de dados será apagada permanentemente.`)) {
       setLoading(true);
+      console.log("Iniciando exclusão do documento Firestore para:", userId);
       try {
         const userRef = doc(db, 'users', userId);
         await deleteDoc(userRef);
-        console.log("Documento removido do Firestore:", userId);
-        alert("Acesso removido com sucesso do banco de dados.");
+        console.log("SUCESSO: Documento removido do Firestore:", userId);
+        alert("✅ Médico removido com sucesso do sistema.");
       } catch (err: any) {
-        console.error("Erro CRÍTICO ao remover utilizador:", err);
-        alert(`ERRO: ${err.message}\n\nVerifique se tem conexão à internet e permissões de Administrador.`);
+        console.error("ERRO CRÍTICO na exclusão:", err);
+        alert(`❌ FALHA NA EXCLUSÃO: ${err.message}\n\nNota: Apenas o Administrador Principal tem permissão para esta ação.`);
       } finally {
         setLoading(false);
       }
@@ -233,48 +234,56 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <SettingsIcon className="text-blue-600" />
-          Configurações do Sistema
-        </h1>
-        <p className="text-slate-500">Gestão de acessos e parâmetros hospitalares</p>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <SettingsIcon className="text-blue-600 dark:text-blue-400" />
+            Configurações do Sistema
+          </h1>
+          {isAdmin && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 rounded-full">
+              <Shield size={12} className="text-emerald-500 dark:text-emerald-400" />
+              <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase">Modo Administrador Ativo</span>
+            </div>
+          )}
+        </div>
+        <p className="text-slate-500 dark:text-slate-400">Gestão de acessos e parâmetros hospitalares</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* User Management */}
-        <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-          <div className="flex items-center justify-between gap-2 font-bold text-slate-800">
+        <section className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6 transition-colors">
+          <div className="flex items-center justify-between gap-2 font-bold text-slate-800 dark:text-slate-200">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
+              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               <h2>Gestão de Equipe</h2>
             </div>
             <div className="flex gap-2">
-               <div className="px-2 py-1 bg-blue-50 text-[10px] rounded-lg text-blue-600 uppercase font-black">
+               <div className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-[10px] rounded-lg text-blue-600 dark:text-blue-400 uppercase font-black">
                  {totals.medicos} Médicos
                </div>
-               <div className="px-2 py-1 bg-slate-100 text-[10px] rounded-lg text-slate-500 uppercase font-black">
+               <div className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-[10px] rounded-lg text-slate-500 dark:text-slate-400 uppercase font-black">
                  {totals.admins} Admins
                </div>
             </div>
           </div>
 
-          <form onSubmit={handleAddUser} className="bg-slate-50 p-4 rounded-lg space-y-3">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Novo Membro</div>
+          <form onSubmit={handleAddUser} className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg space-y-3 transition-colors">
+            <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Novo Membro</div>
             <input 
-              type="text" placeholder="Nome Completo" required className="input text-sm" 
+              type="text" placeholder="Nome Completo" required className="input text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-600" 
               value={newUserName} onChange={e => setNewUserName(e.target.value)}
             />
             <input 
-              type="password" placeholder="Senha Provisória" required className="input text-sm" 
+              type="password" placeholder="Senha Provisória" required className="input text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-600" 
               value={newUserPass} onChange={e => setNewUserPass(e.target.value)}
             />
-            <select className="input text-sm" value={newUserRole} onChange={e => setNewUserRole(e.target.value as any)}>
-              <option value="medic">Médico</option>
-              <option value="admin">Administrador</option>
+            <select className="input text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100" value={newUserRole} onChange={e => setNewUserRole(e.target.value as any)}>
+              <option value="medic" className="dark:bg-slate-900">Médico</option>
+              <option value="admin" className="dark:bg-slate-900">Administrador</option>
             </select>
             <button 
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-100 dark:shadow-none"
             >
               {loading ? <Loader2 className="animate-spin w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
               Criar Acesso
@@ -282,34 +291,34 @@ export const SettingsPage: React.FC = () => {
           </form>
 
           <div className="space-y-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-            <div className="flex items-center justify-between sticky top-0 bg-white py-2 transition-all z-10 border-b border-slate-50 mb-2">
-              <div className="text-xs font-black text-slate-400 uppercase tracking-widest">Membros da Equipe ({users.length})</div>
+            <div className="flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 py-2 transition-all z-10 border-b border-slate-50 dark:border-slate-800 mb-2">
+              <div className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Membros da Equipe ({users.length})</div>
             </div>
             {users.length === 0 ? (
-              <div className="text-center py-10 bg-slate-50 rounded-xl border-2 border-dashed border-slate-100">
-                <Users className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-                <p className="text-slate-400 text-[10px] font-black uppercase">Nenhum membro encontrado</p>
+              <div className="text-center py-10 bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-100 dark:border-slate-800 transition-colors">
+                <Users className="w-8 h-8 text-slate-200 dark:text-slate-700 mx-auto mb-2" />
+                <p className="text-slate-400 dark:text-slate-600 text-[10px] font-black uppercase">Nenhum membro encontrado</p>
               </div>
             ) : (
               users.sort((a, b) => b.createdAt?.localeCompare(a.createdAt || '') || 0).map(user => (
-                <div key={user.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl group hover:border-blue-200 hover:shadow-md hover:shadow-blue-50/50 transition-all duration-300">
+                <div key={user.id} className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl group hover:border-blue-200 dark:hover:border-blue-800 hover:shadow-md hover:shadow-blue-50/50 dark:hover:shadow-none transition-all duration-300">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-slate-50 to-slate-100 rounded-full flex items-center justify-center text-sm font-black text-slate-600 group-hover:from-blue-50 group-hover:to-blue-100 group-hover:text-blue-600 transition-colors border border-slate-200">
+                    <div className="w-10 h-10 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-full flex items-center justify-center text-sm font-black text-slate-600 dark:text-slate-400 group-hover:from-blue-50 dark:group-hover:from-blue-900/20 group-hover:to-blue-100 dark:group-hover:to-blue-900/40 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors border border-slate-200 dark:border-slate-700">
                       {user.nome[0].toUpperCase()}
                     </div>
                     <div className="flex flex-col">
-                      <div className="text-sm font-black text-slate-800 tracking-tight leading-none mb-1 group-hover:text-blue-700 transition-colors">{user.nome}</div>
+                      <div className="text-sm font-black text-slate-800 dark:text-slate-200 tracking-tight leading-none mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">{user.nome}</div>
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
-                           <Shield size={10} className={user.role === 'admin' ? 'text-orange-500' : 'text-blue-500'} />
-                           <span className={`text-[9px] font-black uppercase tracking-tighter ${user.role === 'admin' ? 'text-orange-600' : 'text-blue-600'}`}>
+                           <Shield size={10} className={user.role === 'admin' ? 'text-orange-500 dark:text-orange-400' : 'text-blue-500 dark:text-blue-400'} />
+                           <span className={`text-[9px] font-black uppercase tracking-tighter ${user.role === 'admin' ? 'text-orange-600 dark:text-orange-400' : 'text-blue-600 dark:text-blue-400'}`}>
                              {user.role === 'admin' ? 'Administrador' : 'Corpo Médico'}
                            </span>
                         </div>
                         {user.senha && (
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 border border-amber-100 rounded-md w-fit">
-                             <span className="text-[8px] font-black text-amber-500 uppercase">Senha de Acesso:</span>
-                             <span className="text-[10px] font-mono font-black text-amber-700 tracking-wider">
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-md w-fit transition-colors">
+                             <span className="text-[8px] font-black text-amber-500 dark:text-amber-600 uppercase">Senha de Acesso:</span>
+                             <span className="text-[10px] font-mono font-black text-amber-700 dark:text-amber-400 tracking-wider">
                                {user.senha}
                              </span>
                           </div>
@@ -321,7 +330,7 @@ export const SettingsPage: React.FC = () => {
                     <button 
                       onClick={() => handleDeleteUser(user.id, user.nome)}
                       disabled={loading}
-                      className="text-slate-300 hover:text-red-600 transition-all p-2.5 rounded-xl hover:bg-red-50 flex items-center justify-center border border-transparent hover:border-red-100 shadow-sm hover:shadow-red-100"
+                      className="text-slate-300 dark:text-slate-600 hover:text-red-600 dark:hover:text-red-400 transition-all p-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center border border-transparent hover:border-red-100 dark:hover:border-red-900/40 shadow-sm hover:shadow-red-100 dark:hover:shadow-none"
                       title="Excluir conta permanentemente"
                     >
                       <Trash2 size={16} />
@@ -335,19 +344,19 @@ export const SettingsPage: React.FC = () => {
 
         {/* System Settings */}
         <div className="space-y-8">
-          <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center gap-2 font-bold text-slate-800">
-              <Bell className="w-5 h-5 text-orange-500" />
+          <section className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6 transition-colors">
+            <div className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-200">
+              <Bell className="w-5 h-5 text-orange-500 dark:text-orange-400" />
               <h2>Alertas de Sistema</h2>
             </div>
             
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl transition-colors">
                 <div className="flex items-center gap-3">
-                  <Mail className="text-slate-400" />
+                  <Mail className="text-slate-400 dark:text-slate-500" />
                   <div>
-                    <div className="text-sm font-bold text-slate-700 uppercase tracking-tight">Notificações por Email</div>
-                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-tight">Resumo diário de ocorrências</div>
+                    <div className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight">Notificações por Email</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold tracking-tight">Resumo diário de ocorrências</div>
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -356,15 +365,15 @@ export const SettingsPage: React.FC = () => {
                     checked={settings.emailAlerts}
                     onChange={e => setSettings({...settings, emailAlerts: e.target.checked})}
                   />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 transition-colors"></div>
                 </label>
               </div>
 
               {settings.emailAlerts && (
                 <div className="animate-in slide-in-from-top-2 duration-300">
-                  <label className="text-[10px] font-black uppercase text-slate-400 mb-1 block">E-mail para Alertas de Surtos</label>
+                  <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 block">E-mail para Alertas de Surtos</label>
                   <input 
-                    type="email" className="input text-xs" 
+                    type="email" className="input text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100" 
                     value={settings.targetEmail}
                     onChange={e => setSettings({...settings, targetEmail: e.target.value})}
                     placeholder="ex: direcao@hospital.gv.ao"
@@ -374,7 +383,7 @@ export const SettingsPage: React.FC = () => {
 
               <button 
                 onClick={handleSaveSettings}
-                className="w-full bg-slate-800 text-white py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 transition flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
+                className="w-full bg-slate-800 dark:bg-slate-700 text-white py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-900 dark:hover:bg-slate-600 transition flex items-center justify-center gap-2 shadow-lg shadow-slate-200 dark:shadow-none"
               >
                 <Save size={14} />
                 Guardar Configurações
@@ -382,42 +391,42 @@ export const SettingsPage: React.FC = () => {
             </div>
           </section>
 
-          <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center justify-between gap-2 font-bold text-slate-800">
+          <section className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6 transition-colors">
+            <div className="flex items-center justify-between gap-2 font-bold text-slate-800 dark:text-slate-200">
               <div className="flex items-center gap-2">
-                <Database className="w-5 h-5 text-emerald-500" />
+                <Database className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                 <h2>Backup & Dados</h2>
               </div>
-              <button onClick={() => window.print()} className="p-2 border border-slate-200 rounded-lg text-slate-400 hover:text-blue-600 no-print">
+              <button onClick={() => window.print()} className="p-2 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 no-print transition-colors">
                 <Printer size={16} />
               </button>
             </div>
             <div className="space-y-3">
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Utilitários de Exportação Estruturada</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-600 font-bold uppercase tracking-widest">Utilitários de Exportação Estruturada</p>
               
               <button 
                 onClick={handleExportSQL}
-                className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition"
+                className="w-full flex items-center justify-between p-3 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
-                <span className="flex items-center gap-2 text-xs font-black text-slate-600 uppercase tracking-tight">
-                  <Download size={14} className="text-blue-500" /> SQL Export (.sql)
+                <span className="flex items-center gap-2 text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-tight">
+                  <Download size={14} className="text-blue-500 dark:text-blue-400" /> SQL Export (.sql)
                 </span>
-                <ChevronRight size={14} className="text-slate-300" />
+                <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />
               </button>
 
               <button 
                 onClick={handleFullBackupXLSX}
-                className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition"
+                className="w-full flex items-center justify-between p-3 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
-                <span className="flex items-center gap-2 text-xs font-black text-slate-600 uppercase tracking-tight">
-                  <FileSpreadsheet size={14} className="text-emerald-500" /> Full Backup (.xlsx)
+                <span className="flex items-center gap-2 text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-tight">
+                  <FileSpreadsheet size={14} className="text-emerald-500 dark:text-emerald-400" /> Full Backup (.xlsx)
                 </span>
-                <ChevronRight size={14} className="text-slate-300" />
+                <ChevronRight size={14} className="text-slate-300 dark:text-slate-600" />
               </button>
 
               <div className="pt-2">
-                <label className="w-full flex items-center justify-between p-3 border border-dashed border-slate-300 rounded-xl hover:bg-slate-50 transition cursor-pointer">
-                  <span className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-tight">
+                <label className="w-full flex items-center justify-between p-3 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+                  <span className="flex items-center gap-2 text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-tight">
                     <Upload size={14} /> Restaurar / Importar
                   </span>
                   <input type="file" className="hidden" onChange={handleImportBackup} accept=".xlsx,.json" />
@@ -428,9 +437,9 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
       
-      <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-3">
-        <AlertCircle className="text-blue-600 shrink-0 mt-0.5" />
-        <div className="text-xs text-blue-800 leading-relaxed">
+      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-xl flex items-start gap-3 transition-colors">
+        <AlertCircle className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+        <div className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
           <p className="font-bold mb-1">Nota de Segurança:</p>
           As senhas geradas administrativamente devem ser alteradas pelos médicos no primeiro acesso. O sistema utiliza criptografia de nível militar AES-256 para o armazenamento de dados sensíveis na nuvem do Google Cloud.
         </div>

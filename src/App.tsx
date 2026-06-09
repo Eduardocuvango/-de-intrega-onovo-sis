@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/AuthContext';
+import { ThemeProvider } from './lib/ThemeContext';
 import { AppLayout } from './components/AppLayout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -53,44 +54,46 @@ const EditRouteWrapper = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          
-          <Route path="/" element={
-            <ProtectedRoute adminOnly>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            
+            <Route path="/" element={
+              <ProtectedRoute adminOnly>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
 
-          <Route path="/register" element={
-            <ProtectedRoute>
-              <RegisterPatient />
-            </ProtectedRoute>
-          } />
+            <Route path="/register" element={
+              <ProtectedRoute>
+                <RegisterPatient />
+              </ProtectedRoute>
+            } />
 
-          <Route path="/list" element={
-            <ProtectedRoute>
-              <PatientList />
-            </ProtectedRoute>
-          } />
+            <Route path="/list" element={
+              <ProtectedRoute>
+                <PatientList />
+              </ProtectedRoute>
+            } />
 
-          <Route path="/edit/:id" element={
-            <ProtectedRoute>
-              <EditRouteWrapper />
-            </ProtectedRoute>
-          } />
+            <Route path="/edit/:id" element={
+              <ProtectedRoute>
+                <EditRouteWrapper />
+              </ProtectedRoute>
+            } />
 
-          <Route path="/settings" element={
-            <ProtectedRoute adminOnly>
-              <SettingsPage />
-            </ProtectedRoute>
-          } />
+            <Route path="/settings" element={
+              <ProtectedRoute adminOnly>
+                <SettingsPage />
+              </ProtectedRoute>
+            } />
 
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
